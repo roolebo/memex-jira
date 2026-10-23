@@ -46,4 +46,4 @@ All capabilities are true.
 - `closed` from `statusCategory`, or from `resolution`?
 
 [memex]: https://github.com/roolebo/memex
-[tracker.md]: https://github.com/roolebo/memex/blob/main/tracker.md
+[tracker.md]: https://github.com/roolebo/memex/blob/main/skills/memex/tracker.md
