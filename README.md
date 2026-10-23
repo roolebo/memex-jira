@@ -31,7 +31,9 @@ All capabilities are true.
 - `closed`: `status.statusCategory.key` is `done`.
 - `url`: ADDR/browse/ISSUE.
 - `text`: `description`.
-- `related`: `issuelinks`, `parent` and `subtasks`.
+- `related`: `issuelinks`, TYPE their `outward` or `inward` name
+  as seen from ISSUE, e.g. `is blocked by`; `parent`, TYPE `parent`;
+  `subtasks`, TYPE `subtask`.
 - `basis`: `updated`.
 - `links`: `issue`.
 
