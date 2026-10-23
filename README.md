@@ -3,6 +3,8 @@
 A [memex] adapter for the `tracker` role in JIRA. The role is specified
 in memex's [tracker.md].
 
+Tests run offline, with a fake curl: `test/run [TEST...]`.
+
 ## Reaching JIRA
 
 ADDR is the base URL of the server. The adapter uses `/rest/api/2/`.
