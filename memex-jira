@@ -209,7 +209,7 @@ search() {
 comment() {
   local body
   check_key "$1"
-  body=$(jq -Rs '{body: .}')
+  body=$(jq -Rsc '{body: .}')
   [ "$body" != '{"body":""}' ] || die "No text on stdin"
   post "issue/$1/comment" "$body" > /dev/null
 }
