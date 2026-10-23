@@ -1,0 +1,15 @@
+{
+  "startAt": 2,
+  "maxResults": 2,
+  "total": 3,
+  "comments": [
+    {
+      "self": "https://jira.example.org/rest/api/2/issue/12688/comment/170001",
+      "id": "170001",
+      "author": {"name": "jroe", "key": "jroe", "emailAddress": "jroe@example.org", "displayName": "John Roe", "active": true},
+      "body": "One more man page to fix.",
+      "created": "2026-10-21T17:40:01.000+0000",
+      "updated": "2026-10-21T17:40:01.000+0000"
+    }
+  ]
+}

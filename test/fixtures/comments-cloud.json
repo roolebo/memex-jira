@@ -1,0 +1,1 @@
+{"startAt":0,"maxResults":100,"total":1,"comments":[{"self":"https://example.atlassian.net/rest/api/2/issue/10001/comment/10100","id":"10100","author":{"accountId":"5b10ac8d82e05b22cc7d4ef5","displayName":"Jane Doe","active":true},"body":"Looking into it.","created":"2026-10-02T09:30:00.456+0100","updated":"2026-10-02T09:30:00.456+0100"}]}
