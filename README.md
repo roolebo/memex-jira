@@ -14,7 +14,7 @@ without them, it reads what JIRA shows anyone.
 
 ## Commands
 
-    issue ISSUE     issue/ISSUE, its comment and remotelink
+    issue ISSUE     issue/ISSUE and its comment
     search          search on Server, search/jql on Cloud; the QUERY
                     is JQL
     comment ISSUE   POST issue/ISSUE/comment
