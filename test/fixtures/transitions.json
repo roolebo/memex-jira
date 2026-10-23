@@ -1,0 +1,1 @@
+{"expand":"transitions","transitions":[{"id":"4","name":"Start Progress","to":{"name":"In Progress","id":"3","statusCategory":{"key":"indeterminate"}}},{"id":"5","name":"Resolve Issue","to":{"name":"Resolved","id":"5","statusCategory":{"key":"done"}}},{"id":"2","name":"Close Issue","to":{"name":"Closed","id":"6","statusCategory":{"key":"done"}}}]}

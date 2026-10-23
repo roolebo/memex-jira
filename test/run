@@ -354,6 +354,69 @@ test_search_fails() {
   check output "$OUT" ''
 }
 
+# The text goes as is, in a JSON body
+test_comment() {
+  login
+  printf 'Fixed in the manual: "lfs df".\n' > "$IN"
+  route POST "$API/issue/LU-930/comment" comment-added.json 201
+  call comment LU-930
+  check status "$STATUS" 0
+  check output "$OUT" ''
+  check method "$(requests '.[0].method')" POST
+  check body "$(requests '.[0].body | fromjson | tojson')" \
+    '{"body":"Fixed in the manual: \"lfs df\".\n"}'
+  check_has type "$(requests '.[0].args | join(" ")')" \
+    'Content-Type: application/json'
+  check auth "$(requests '.[0].auth')" stdin
+}
+
+test_comment_no_text() {
+  login
+  call comment LU-930
+  check status "$STATUS" 1
+  check requests "$(requests length)" 0
+}
+
+test_comment_refused() {
+  echo 'Fixed.' > "$IN"
+  route POST "$API/issue/LU-930/comment" error.json 401
+  call comment LU-930
+  check status "$STATUS" 1
+  check_has error "$ERR" "Cannot post to $API/issue/LU-930/comment"
+}
+
+# STATUS names where the transition goes, not the transition
+test_transition() {
+  login
+  route GET "$API/issue/LU-930/transitions" transitions.json
+  route POST "$API/issue/LU-930/transitions" - 204
+  call transition LU-930 Resolved
+  check status "$STATUS" 0
+  check requests "$(requests '[.[] | "\(.method) \(.url)"] | join(" ")')" \
+    "GET $API/issue/LU-930/transitions POST $API/issue/LU-930/transitions"
+  check body "$(requests '.[1].body | fromjson | tojson')" \
+    '{"transition":{"id":"5"}}'
+}
+
+test_transition_missing() {
+  login
+  route GET "$API/issue/LU-930/transitions" transitions.json
+  call transition LU-930 'Resolve Issue'
+  check status "$STATUS" 1
+  check_has error "$ERR" 'LU-930 has no transition to Resolve Issue'
+  check posts "$(requests 'map(select(.method == "POST")) | length')" 0
+}
+
+test_transition_refused() {
+  login
+  route GET "$API/issue/LU-930/transitions" transitions.json
+  route POST "$API/issue/LU-930/transitions" error.json 400
+  call transition LU-930 Closed
+  check status "$STATUS" 1
+  check body "$(requests '.[1].body | fromjson | tojson')" \
+    '{"transition":{"id":"2"}}'
+}
+
 run() {
   local failed=$FAILED
   TEST=$1
