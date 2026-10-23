@@ -1,7 +1,7 @@
 {
   "id": "19239",
   "self": "https://jira.example.org/rest/api/2/issue/19239",
-  "key": "LU-3425",
+  "key": "PRJ-3425",
   "fields": {
     "summary": "update l_getgroups to be l_getidentity",
     "issuetype": {"id": "7", "name": "Technical task", "subtask": true},
@@ -17,7 +17,7 @@
     "updated": "2017-04-11T05:02:30.000+0000",
     "description": null,
     "issuelinks": [],
-    "parent": {"id": "12688", "key": "LU-930", "fields": {"summary": "Update or improvement to a Lustre man page or documentation"}},
+    "parent": {"id": "12688", "key": "PRJ-930", "fields": {"summary": "Update or improvement to a Project man page or documentation"}},
     "subtasks": []
   }
 }

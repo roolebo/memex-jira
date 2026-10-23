@@ -2,9 +2,9 @@
   "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations",
   "id": "12688",
   "self": "https://jira.example.org/rest/api/2/issue/12688",
-  "key": "LU-930",
+  "key": "PRJ-930",
   "fields": {
-    "summary": "Update or improvement to a Lustre man page or documentation",
+    "summary": "Update or improvement to a Project man page or documentation",
     "issuetype": {"self": "https://jira.example.org/rest/api/2/issuetype/4", "id": "4", "name": "Improvement", "subtask": false},
     "status": {
       "self": "https://jira.example.org/rest/api/2/status/1",
@@ -37,17 +37,17 @@
       {
         "id": "71200",
         "type": {"id": "10011", "name": "Related", "inward": "is related to", "outward": "is related to "},
-        "inwardIssue": {"id": "79011", "key": "LU-19273"}
+        "inwardIssue": {"id": "79011", "key": "PRJ-19273"}
       },
       {
         "id": "71201",
         "type": {"id": "10000", "name": "Blocker", "inward": "is blocked by", "outward": "blocks"},
-        "outwardIssue": {"id": "70313", "key": "LU-9633"}
+        "outwardIssue": {"id": "70313", "key": "PRJ-9633"}
       }
     ],
     "subtasks": [
-      {"id": "19239", "key": "LU-3425", "fields": {"summary": "update l_getgroups to be l_getidentity", "status": {"name": "Resolved"}}},
-      {"id": "22861", "key": "LU-4466", "fields": {"summary": "document lfs setstripe options", "status": {"name": "Open"}}}
+      {"id": "19239", "key": "PRJ-3425", "fields": {"summary": "update l_getgroups to be l_getidentity", "status": {"name": "Resolved"}}},
+      {"id": "22861", "key": "PRJ-4466", "fields": {"summary": "document lfs setstripe options", "status": {"name": "Open"}}}
     ]
   }
 }

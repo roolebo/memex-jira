@@ -1,1 +1,1 @@
-{"expand":"schema,names","startAt":0,"maxResults":1,"total":2,"issues":[{"id":"12688","self":"https://jira.example.org/rest/api/2/issue/12688","key":"LU-930"}]}
+{"expand":"schema,names","startAt":0,"maxResults":1,"total":2,"issues":[{"id":"12688","self":"https://jira.example.org/rest/api/2/issue/12688","key":"PRJ-930"}]}

@@ -122,17 +122,17 @@ test_unknown_command() {
 test_usage() {
   call issue
   check "no issue" "$STATUS" 1
-  call transition LU-930
+  call transition PRJ-930
   check "no status" "$STATUS" 1
   STATUS=0
-  "$ADAPTER" jira.example.org tracker issue LU-930 < "$IN" 2> /dev/null ||
+  "$ADAPTER" jira.example.org tracker issue PRJ-930 < "$IN" 2> /dev/null ||
     STATUS=$?
   check "not a URL" "$STATUS" 1
   check requests "$(requests length)" 0
 }
 
 test_not_a_key() {
-  call issue 'LU-930&fields=*all'
+  call issue 'PRJ-930&fields=*all'
   check status "$STATUS" 1
   check_has error "$ERR" 'Not an issue key'
   check requests "$(requests length)" 0
@@ -141,34 +141,34 @@ test_not_a_key() {
 FIELDS='summary,issuetype,status,priority,assignee,reporter,created,updated'
 FIELDS+=',description,issuelinks,parent,subtasks'
 
-# LU-930 and its comments, in two pages
+# PRJ-930 and its comments, in two pages
 route_lu930() {
-  route GET "$API/issue/LU-930?fields=$FIELDS" issue-LU-930.json
-  route GET "$API/issue/LU-930/comment?startAt=0&maxResults=100" \
-    comments-LU-930-0.json
-  route GET "$API/issue/LU-930/comment?startAt=2&maxResults=100" \
-    comments-LU-930-2.json
+  route GET "$API/issue/PRJ-930?fields=$FIELDS" issue-PRJ-930.json
+  route GET "$API/issue/PRJ-930/comment?startAt=0&maxResults=100" \
+    comments-PRJ-930-0.json
+  route GET "$API/issue/PRJ-930/comment?startAt=2&maxResults=100" \
+    comments-PRJ-930-2.json
 }
 
-# LU-3425, a closed subtask of LU-930 without comments
+# PRJ-3425, a closed subtask of PRJ-930 without comments
 route_lu3425() {
-  route GET "$API/issue/LU-3425?fields=$FIELDS" issue-LU-3425.json
-  route GET "$API/issue/LU-3425/comment?startAt=0&maxResults=100" \
+  route GET "$API/issue/PRJ-3425?fields=$FIELDS" issue-PRJ-3425.json
+  route GET "$API/issue/PRJ-3425/comment?startAt=0&maxResults=100" \
     comments-empty.json
 }
 
 test_issue() {
   route_lu930
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 0
   check count "$(records length)" 1
   check_json envelope '.[0] | del(.data)' << 'EOF'
-{"id": "LU-930", "source": "https://jira.example.org", "role": "tracker",
+{"id": "PRJ-930", "source": "https://jira.example.org", "role": "tracker",
  "kind": "issue", "basis": "2026-10-21T17:40:01.000+0000",
- "links": [["issue", "LU-930"]], "notes": {}}
+ "links": [["issue", "PRJ-930"]], "notes": {}}
 EOF
   check_json data '.[0].data | del(.comments)' << 'EOF'
-{"title": "Update or improvement to a Lustre man page or documentation",
+{"title": "Update or improvement to a Project man page or documentation",
  "type": "Improvement", "status": "Open", "closed": false,
  "priority": "Minor",
  "assignee": {"name": "John Roe", "email": "jroe@example.org",
@@ -177,10 +177,10 @@ EOF
               "me": false},
  "created": "2011-12-15T13:50:27+00:00",
  "updated": "2026-10-21T17:40:01+00:00",
- "url": "https://jira.example.org/browse/LU-930",
+ "url": "https://jira.example.org/browse/PRJ-930",
  "text": "Trivial changes to man pages,\r\ndocumentation or messages.",
- "related": [["is related to", "LU-19273"], ["blocks", "LU-9633"],
-             ["subtask", "LU-3425"], ["subtask", "LU-4466"]]}
+ "related": [["is related to", "PRJ-19273"], ["blocks", "PRJ-9633"],
+             ["subtask", "PRJ-3425"], ["subtask", "PRJ-4466"]]}
 EOF
   check comments "$(records '[.[0].data.comments[].id] | join(" ")')" \
     '166106 166200 170001'
@@ -196,15 +196,15 @@ EOF
 test_issue_trailing_slash() {
   route_lu930
   ADDR=$ADDR/
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 0
   check source "$(records '.[0].source')" https://jira.example.org
-  check url "$(records '.[0].data.url')" https://jira.example.org/browse/LU-930
+  check url "$(records '.[0].data.url')" https://jira.example.org/browse/PRJ-930
 }
 
 test_issue_closed_subtask() {
   route_lu3425
-  call issue LU-3425
+  call issue PRJ-3425
   check status "$STATUS" 0
   check status "$(records '.[0].data.status')" Resolved
   check closed "$(records '.[0].data.closed')" true
@@ -212,7 +212,7 @@ test_issue_closed_subtask() {
     '[null,null]'
   check text "$(records '.[0].data.text | tojson')" '""'
   check related "$(records '.[0].data.related | tojson')" \
-    '[["parent","LU-930"]]'
+    '[["parent","PRJ-930"]]'
   check comments "$(records '.[0].data.comments | tojson')" '[]'
 }
 
@@ -221,7 +221,7 @@ test_issue_logged_in() {
   login
   route GET "$API/myself" myself-server.json
   route_lu930
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 0
   check auth "$(requests '[.[].auth] | unique | tojson')" '["stdin"]'
   check user "$(requests '[.[].user] | unique | .[]')" "jdoe:$SECRET"
@@ -235,7 +235,7 @@ test_issue_netrc() {
   echo 'machine jira.example.org login jdoe password x' > "$HOME/.netrc"
   route GET "$API/myself" myself-server.json
   route_lu930
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 0
   check auth "$(requests '[.[].auth] | unique | tojson')" '["netrc"]'
   check reporter "$(records '.[0].data.reporter.me')" true
@@ -244,7 +244,7 @@ test_issue_netrc() {
 test_issue_netrc_other_host() {
   echo 'machine jira.example.com login jdoe password x' > "$HOME/.netrc"
   route_lu930
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 0
   check auth "$(requests '[.[].auth] | unique | tojson')" '[null]'
 }
@@ -271,17 +271,17 @@ EOF
 }
 
 test_issue_missing() {
-  route GET "$API/issue/LU-1?fields=$FIELDS" error.json 404
-  call issue LU-1
+  route GET "$API/issue/PRJ-1?fields=$FIELDS" error.json 404
+  call issue PRJ-1
   check status "$STATUS" 1
-  check_has error "$ERR" "Cannot read $API/issue/LU-1"
+  check_has error "$ERR" "Cannot read $API/issue/PRJ-1"
   check output "$OUT" ''
 }
 
 test_issue_comments_fail() {
-  route GET "$API/issue/LU-930?fields=$FIELDS" issue-LU-930.json
-  route GET "$API/issue/LU-930/comment?startAt=0&maxResults=100" - 500
-  call issue LU-930
+  route GET "$API/issue/PRJ-930?fields=$FIELDS" issue-PRJ-930.json
+  route GET "$API/issue/PRJ-930/comment?startAt=0&maxResults=100" - 500
+  call issue PRJ-930
   check status "$STATUS" 1
   check output "$OUT" ''
 }
@@ -289,7 +289,7 @@ test_issue_comments_fail() {
 test_issue_login_fails() {
   login
   route GET "$API/myself" - 401
-  call issue LU-930
+  call issue PRJ-930
   check status "$STATUS" 1
   check requests "$(requests length)" 1
 }
@@ -309,7 +309,7 @@ test_search_server() {
   route_lu3425
   call search
   check status "$STATUS" 0
-  check issues "$(records '[.[].id] | join(" ")')" 'LU-930 LU-3425'
+  check issues "$(records '[.[].id] | join(" ")')" 'PRJ-930 PRJ-3425'
   check kinds "$(records '[.[].kind] | unique | join(" ")')" issue
 }
 
@@ -326,7 +326,7 @@ test_search_cloud() {
   route_lu3425
   call search
   check status "$STATUS" 0
-  check issues "$(records '[.[].id] | join(" ")')" 'LU-930 LU-3425'
+  check issues "$(records '[.[].id] | join(" ")')" 'PRJ-930 PRJ-3425'
 }
 
 test_search_nothing() {
@@ -358,8 +358,8 @@ test_search_fails() {
 test_comment() {
   login
   printf 'Fixed in the manual: "lfs df".\n' > "$IN"
-  route POST "$API/issue/LU-930/comment" comment-added.json 201
-  call comment LU-930
+  route POST "$API/issue/PRJ-930/comment" comment-added.json 201
+  call comment PRJ-930
   check status "$STATUS" 0
   check output "$OUT" ''
   check method "$(requests '.[0].method')" POST
@@ -372,46 +372,46 @@ test_comment() {
 
 test_comment_no_text() {
   login
-  call comment LU-930
+  call comment PRJ-930
   check status "$STATUS" 1
   check requests "$(requests length)" 0
 }
 
 test_comment_refused() {
   echo 'Fixed.' > "$IN"
-  route POST "$API/issue/LU-930/comment" error.json 401
-  call comment LU-930
+  route POST "$API/issue/PRJ-930/comment" error.json 401
+  call comment PRJ-930
   check status "$STATUS" 1
-  check_has error "$ERR" "Cannot post to $API/issue/LU-930/comment"
+  check_has error "$ERR" "Cannot post to $API/issue/PRJ-930/comment"
 }
 
 # STATUS names where the transition goes, not the transition
 test_transition() {
   login
-  route GET "$API/issue/LU-930/transitions" transitions.json
-  route POST "$API/issue/LU-930/transitions" - 204
-  call transition LU-930 Resolved
+  route GET "$API/issue/PRJ-930/transitions" transitions.json
+  route POST "$API/issue/PRJ-930/transitions" - 204
+  call transition PRJ-930 Resolved
   check status "$STATUS" 0
   check requests "$(requests '[.[] | "\(.method) \(.url)"] | join(" ")')" \
-    "GET $API/issue/LU-930/transitions POST $API/issue/LU-930/transitions"
+    "GET $API/issue/PRJ-930/transitions POST $API/issue/PRJ-930/transitions"
   check body "$(requests '.[1].body | fromjson | tojson')" \
     '{"transition":{"id":"5"}}'
 }
 
 test_transition_missing() {
   login
-  route GET "$API/issue/LU-930/transitions" transitions.json
-  call transition LU-930 'Resolve Issue'
+  route GET "$API/issue/PRJ-930/transitions" transitions.json
+  call transition PRJ-930 'Resolve Issue'
   check status "$STATUS" 1
-  check_has error "$ERR" 'LU-930 has no transition to Resolve Issue'
+  check_has error "$ERR" 'PRJ-930 has no transition to Resolve Issue'
   check posts "$(requests 'map(select(.method == "POST")) | length')" 0
 }
 
 test_transition_refused() {
   login
-  route GET "$API/issue/LU-930/transitions" transitions.json
-  route POST "$API/issue/LU-930/transitions" error.json 400
-  call transition LU-930 Closed
+  route GET "$API/issue/PRJ-930/transitions" transitions.json
+  route POST "$API/issue/PRJ-930/transitions" error.json 400
+  call transition PRJ-930 Closed
   check status "$STATUS" 1
   check body "$(requests '.[1].body | fromjson | tojson')" \
     '{"transition":{"id":"2"}}'
