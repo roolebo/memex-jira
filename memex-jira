@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+#
+# memex-jira: memex adapter for the tracker role in JIRA.
+#
+#   memex-jira detect REPO
+#   memex-jira ADDR COMMAND [ARGUMENTS]
+#
+# README.md specifies the mapping. Credentials come from JIRA_USER and
+# JIRA_PASSWORD (the password or API token), e.g. set by withkeys, or else
+# from ~/.netrc for ADDR's host; without them only reading works. Never
+# prompts. comment and transition write to JIRA at once: trackers have no
+# drafts.
+#
+
+set -e
+
+die() {
+  echo "$*" >&2
+  exit 1
+}
+
+unsupported() {
+  echo "Not supported: $1" >&2
+  exit 2
+}
+
+usage() {
+  cat << EOF
+Usage: $0 detect REPO
+       $0 ADDR capabilities
+       $0 ADDR issue ISSUE
+       $0 ADDR search < QUERY
+       $0 ADDR comment ISSUE < TEXT
+       $0 ADDR transition ISSUE STATUS
+EOF
+}
+
+# A REPO doesn't name its JIRA, so nothing is detected
+detect() {
+  [ -d "$1" ] || die "No such directory: $1"
+  exit 1
+}
+
+HOST_RE='^https?://([^/:]+)'
+KEY_RE='^[A-Za-z][A-Za-z0-9_]*-[0-9]+$'
+
+# Escapes a string for a double-quoted value in a curl config
+quote() {
+  sed 's/[\\"]/\\&/g' <<< "$1"
+}
+
+# Runs curl on a REST path with the credentials, if any, and ARGUMENTS
+call() {
+  local url=$ADDR/rest/api/2/$1
+  shift
+  # The password goes to curl on stdin, not on its command line
+  if [ "$AUTH" == env ]; then
+    printf 'user = "%s:%s"\n' "$(quote "$JIRA_USER")" \
+      "$(quote "$JIRA_PASSWORD")" | curl -fsS -K - "$@" "$url"
+  elif [ "$AUTH" == netrc ]; then
+    curl -fsS --netrc "$@" "$url"
+  else
+    curl -fsS "$@" "$url"
+  fi
+}
+
+# GET a REST path; prints the JSON
+get() {
+  local reply
+  reply=$(call "$1") || die "Cannot read $ADDR/rest/api/2/$1"
+  echo "$reply"
+}
+
+# POST JSON to a REST path; prints the reply
+post() {
+  local reply
+  reply=$(call "$1" -H 'Content-Type: application/json' \
+    --data-binary "$2") || die "Cannot post to $ADDR/rest/api/2/$1"
+  echo "$reply"
+}
+
+# The account of the user as JSON, or null without credentials
+self() {
+  local account
+  if [ -n "$AUTH" ]; then
+    account=$(get myself) || exit 1
+    jq '.accountId // .key' <<< "$account"
+  else
+    echo null
+  fi
+}
+
+# jq definitions shared by the commands
+JQ_DEFS='
+def time: sub("\\.[0-9]+"; "")
+  | sub("(?<h>[+-][0-9]{2})(?<m>[0-9]{2})$"; "\(.h):\(.m)");
+def person: if . == null then null else {
+  name: (.displayName // .name // ""),
+  email: (.emailAddress // null),
+  username: (.name // null),
+  me: ((.accountId // .key) == $self)
+} end;
+def record($kind; $id; $basis; $links; $data): {
+  id: $id, source: $addr, role: "tracker", kind: $kind,
+  basis: $basis, links: $links, data: $data, notes: {}
+};
+'
+
+ISSUE_FIELDS='summary,issuetype,status,priority,assignee,reporter'
+ISSUE_FIELDS+=',created,updated,description,issuelinks,parent,subtasks'
+
+check_key() {
+  [[ "$1" =~ $KEY_RE ]] || die "Not an issue key: $1"
+}
+
+# Prints the pages of comments on an issue, one JSON object per line
+comments() {
+  local start=0
+  local page
+  while [ -n "$start" ]; do
+    page=$(get "issue/$1/comment?startAt=$start&maxResults=100") || exit 1
+    echo "$page"
+    start=$(jq '(.startAt + (.comments | length)) as $next
+      | if (.comments | length) > 0 and $next < .total
+        then $next else empty end' <<< "$page")
+  done
+}
+
+issue() {
+  local json
+  local pages
+  check_key "$1"
+  json=$(get "issue/$1?fields=$ISSUE_FIELDS") || exit 1
+  pages=$(comments "$1") || exit 1
+  jq -c -s --arg addr "$ADDR" --argjson self "$SELF" "$JQ_DEFS"'
+      .[0] as $issue
+      | [.[1:][].comments[]] as $comments
+      | $issue.fields as $f
+      | record("issue"; $issue.key; $f.updated;
+          [["issue", $issue.key]];
+          {
+            title: $f.summary,
+            type: ($f.issuetype.name // null),
+            status: $f.status.name,
+            closed: ($f.status.statusCategory.key == "done"),
+            priority: ($f.priority.name // null),
+            assignee: ($f.assignee | person),
+            reporter: ($f.reporter | person),
+            created: ($f.created | time),
+            updated: ($f.updated | time),
+            url: ($addr + "/browse/" + $issue.key),
+            text: ($f.description // ""),
+            comments: [$comments[] | {
+              id: .id,
+              author: (.author | person),
+              text: .body,
+              created: (.created | time)
+            }],
+            related: ([$f.issuelinks[]? |
+                if .outwardIssue then [.type.outward, .outwardIssue.key]
+                else [.type.inward, .inwardIssue.key] end
+                | .[0] |= gsub("^\\s+|\\s+$"; "")]
+              + [$f.parent // empty | ["parent", .key]]
+              + [$f.subtasks[]? | ["subtask", .key]])
+          })' <<< "$json"$'\n'"$pages"
+}
+
+# Prints the keys of the issues JQL matches, one per line
+search::server() {
+  local start=0
+  local page
+  while [ -n "$start" ]; do
+    page=$(get "search?jql=$1&fields=key&startAt=$start&maxResults=100") ||
+      exit 1
+    jq -r '.issues[].key' <<< "$page"
+    start=$(jq '(.startAt + (.issues | length)) as $next
+      | if (.issues | length) > 0 and $next < .total
+        then $next else empty end' <<< "$page")
+  done
+}
+
+# Same on Cloud, where search/jql pages by token
+search::cloud() {
+  local token
+  local page
+  local path
+  while :; do
+    path="search/jql?jql=$1&fields=key&maxResults=100"
+    [ -n "$token" ] && path+="&nextPageToken=$token"
+    page=$(get "$path") || exit 1
+    jq -r '.issues[].key' <<< "$page"
+    token=$(jq -r '.nextPageToken // empty | @uri' <<< "$page")
+    [ -n "$token" ] || break
+  done
+}
+
+search() {
+  local query
+  local info
+  local deployment
+  local keys
+  local key
+  query=$(jq -Rrs 'sub("\\s+$"; "") | @uri')
+  [ -n "$query" ] || die "No QUERY on stdin"
+  info=$(get serverInfo) || exit 1
+  deployment=$(jq -r '.deploymentType // "Server"' <<< "$info")
+  if [ "$deployment" == Cloud ]; then
+    keys=$(search::cloud "$query") || exit 1
+  else
+    keys=$(search::server "$query") || exit 1
+  fi
+  for key in $keys; do
+    issue "$key"
+  done
+}
+
+comment() {
+  local body
+  check_key "$1"
+  body=$(jq -Rs '{body: .}')
+  [ "$body" != '{"body":""}' ] || die "No text on stdin"
+  post "issue/$1/comment" "$body" > /dev/null
+}
+
+transition() {
+  local json
+  local id
+  check_key "$1"
+  json=$(get "issue/$1/transitions") || exit 1
+  id=$(jq -r --arg status "$2" \
+    'first(.transitions[] | select(.to.name == $status) | .id) // empty' \
+    <<< "$json")
+  [ -n "$id" ] || die "$1 has no transition to $2"
+  post "issue/$1/transitions" "{\"transition\": {\"id\": \"$id\"}}" \
+    > /dev/null
+}
+
+if [ "$1" == "-h" -o "$1" == "--help" ]; then
+  usage
+  exit 0
+fi
+if [ "$1" == detect ]; then
+  [ $# -eq 2 ] || die "$(usage)"
+  detect "$2"
+fi
+[ $# -ge 2 ] || die "$(usage)"
+
+ADDR=${1%/}
+[[ "$ADDR" =~ $HOST_RE ]] || die "Not an http(s) URL: $1"
+if [ -n "$JIRA_USER" -a -n "$JIRA_PASSWORD" ]; then
+  AUTH=env
+elif grep -qs "machine ${BASH_REMATCH[1]}\b" ~/.netrc; then
+  AUTH=netrc
+fi
+
+case "$2" in
+  capabilities)
+    echo '{"search": true, "comment": true, "transition": true}'
+    ;;
+  issue)
+    [ $# -eq 3 ] || die "$(usage)"
+    SELF=$(self)
+    issue "$3"
+    ;;
+  search)
+    [ $# -eq 2 ] || die "$(usage)"
+    SELF=$(self)
+    search
+    ;;
+  comment)
+    [ $# -eq 3 ] || die "$(usage)"
+    "$2" "$3"
+    ;;
+  transition)
+    [ $# -eq 4 ] || die "$(usage)"
+    "$2" "$3" "$4"
+    ;;
+  *)
+    unsupported "$2"
+    ;;
+esac
