@@ -2,7 +2,6 @@
 #
 # memex-jira: memex adapter for the tracker role in JIRA.
 #
-#   memex-jira detect REPO
 #   memex-jira ADDR ROLE COMMAND [ARGUMENTS]
 #
 # README.md specifies the mapping. Credentials come from JIRA_USER and
@@ -26,19 +25,12 @@ unsupported() {
 
 usage() {
   cat << EOF
-Usage: $0 detect REPO
-       $0 ADDR tracker capabilities
+Usage: $0 ADDR tracker capabilities
        $0 ADDR tracker issue ISSUE
        $0 ADDR tracker search < QUERY
        $0 ADDR tracker comment ISSUE < TEXT
        $0 ADDR tracker transition ISSUE STATUS
 EOF
-}
-
-# A REPO doesn't name its JIRA, so nothing is detected
-detect() {
-  [ -d "$1" ] || die "No such directory: $1"
-  exit 1
 }
 
 HOST_RE='^https?://([^/:]+)'
@@ -238,10 +230,6 @@ transition() {
 if [ "$1" == "-h" -o "$1" == "--help" ]; then
   usage
   exit 0
-fi
-if [ "$1" == detect ]; then
-  [ $# -eq 2 ] || die "$(usage)"
-  detect "$2"
 fi
 [ $# -ge 3 ] || die "$(usage)"
 if [ "$2" != tracker ]; then

@@ -10,7 +10,6 @@ With credentials, from JIRA_USER and JIRA_PASSWORD (the password or API
 token) or else from `~/.netrc` for ADDR's host, it logs in with them;
 without them, it reads what JIRA shows anyone.
 
-`detect` prints nothing.
 
 ## Commands
 
