@@ -5,9 +5,10 @@ in memex's [tracker.md].
 
 ## Reaching JIRA
 
-ADDR is the base URL of the server. The adapter uses `/rest/api/2/`
-with the user and password, or API token, for ADDR's host in
-`~/.netrc`.
+ADDR is the base URL of the server. The adapter uses `/rest/api/2/`.
+With credentials, from JIRA_USER and JIRA_PASSWORD (the password or API
+token) or else from `~/.netrc` for ADDR's host, it logs in with them;
+without them, it reads what JIRA shows anyone.
 
 `detect` prints nothing.
 
